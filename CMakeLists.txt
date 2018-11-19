@@ -116,7 +116,7 @@ if(NOT HEADLESS)
   set(CMAKE_AUTOMOC ON)
   set(CMAKE_AUTOUIC ON)
   set(CMAKE_AUTORCC ON)
-  find_package(Qt5 COMPONENTS Core Widgets OpenGL Concurrent REQUIRED QUIET)
+  find_package(Qt5 COMPONENTS Core Widgets Multimedia OpenGL Concurrent REQUIRED QUIET)
   message(STATUS "Qt5: ${Qt5_VERSION}")
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -132,6 +132,17 @@ if(NOT HEADLESS)
   message(STATUS "QScintilla: ${QT5QSCINTILLA_VERSION_STRING}")
   add_definitions(-DUSE_SCINTILLA_EDITOR)
   add_definitions(-DENABLE_MDI)
+
+  find_package(Qt5DBus QUIET)
+  if (Qt5DBus_FOUND)
+    message(STATUS "DBus input driver enabled")
+    add_definitions(-DENABLE_DBUS)
+    set(INPUT_DRIVER_DBUS_SOURCES src/input/DBusInputDriver.cc)
+    qt5_add_dbus_interface(INPUT_DRIVER_DBUS_SOURCES org.openscad.OpenSCAD.xml openscad_interface)
+    qt5_add_dbus_adaptor(INPUT_DRIVER_DBUS_SOURCES org.openscad.OpenSCAD.xml input/DBusInputDriver.h DBusInputDriver openscad_adaptor)
+  else()
+    message(STATUS "DBus input driver disabled as the QtDBus module could not be found.")
+  endif()
   
 #  add_definitions(${Qt5Widgets_DEFINITIONS})
 #  add_definitions(${Qt5OpenGL_DEFINITIONS})
@@ -294,11 +305,13 @@ set(CORE_SOURCES
 set(NOCGAL_SOURCES
   src/builtin.cc 
   src/import.cc
+  src/import_3mf.cc
   src/import_stl.cc
   src/import_amf.cc
   src/import_off.cc
   src/import_svg.cc
   src/export.cc
+  src/export_3mf.cc
   src/export_stl.cc
   src/export_amf.cc
   src/export_off.cc
@@ -358,12 +371,16 @@ set(OFFSCREEN_SOURCES
   src/render.cc
   src/OpenCSGRenderer.cc)
 
+set(INPUT_DRIVER_SOURCES
+  ${INPUT_DRIVER_DBUS_SOURCES})
+
 set(GUI_SOURCES
   src/mainwin.cc
   src/OpenSCADApp.cc
   src/EventFilter.h
   src/WindowManager.cc
   src/Preferences.cc
+  src/SettingsWriter.cc
   src/FontListDialog.cc
   src/FontListTableView.cc
   src/LibraryInfoDialog.cc
@@ -396,6 +413,13 @@ set(GUI_SOURCES
   src/parameter/parametertext.cpp
   src/parameter/parametervector.cpp
   src/parameter/parametervirtualwidget.cpp
+  src/input/AxisConfigWidget.cc
+  src/input/ButtonConfigWidget.cc
+  src/input/InputDriver.cc
+  src/input/InputDriverManager.cc
+  src/input/InputEventMapper.cc
+  src/input/WheelIgnorer.cc
+  ${INPUT_DRIVER_SOURCES}
   )
 
 # header-only code
@@ -432,6 +456,11 @@ endif()
 
 set(RESOURCE_FILES icons/OpenSCAD.icns)
 
+if(ENABLE_SPNAV)
+  add_definitions(-DENABLE_SPNAV)
+  list(APPEND Sources src/input/SpaceNavInputDriver.cc)
+endif()
+
 add_executable(OpenSCAD ${Sources} ${RESOURCE_FILES})
 
 # FIXME: snapshot, ICON = icons/icon-nightly.icns
@@ -449,6 +478,10 @@ elseif(UNIX)
   set_target_properties(OpenSCAD PROPERTIES
     OUTPUT_NAME openscad
   )
+endif()
+
+if(ENABLE_SPNAV)
+  target_link_libraries(OpenSCAD spnav)
 endif()
 
 set(COMMON_LIBRARIES
@@ -469,6 +502,6 @@ set(COMMON_LIBRARIES
 
 target_link_libraries(OpenSCAD ${COMMON_LIBRARIES})
 if(NOT HEADLESS)
-  target_link_libraries(OpenSCAD Qt5::Core Qt5::Widgets Qt5::OpenGL Qt5::Concurrent ${QT5QSCINTILLA_LIBRARY})
+  target_link_libraries(OpenSCAD Qt5::Core Qt5::Widgets Qt5::Multimedia Qt5::OpenGL Qt5::Concurrent ${QT5QSCINTILLA_LIBRARY} ${Qt5DBus_LIBRARIES})
 endif()
 
