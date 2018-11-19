@@ -28,7 +28,7 @@
 
 #include <boost/filesystem.hpp>
 
-extern bool parse(class FileModule *&module, const std::string& text, const std::string &filename, const std::string &mainFile, int debug);
+extern bool parse(class FileModule * &module, const std::string &text, const std::string &filename, const std::string &mainFile, int debug);
 
 #include <string>
 extern std::string commandline_commands;
@@ -47,4 +47,4 @@ extern std::string openscad_displayversionnumber;
 // Version used for detailed display
 extern std::string openscad_detailedversionnumber;
 // Custom argument parser
-std::pair<std::string, std::string> customSyntax(const std::string& s);
+std::pair<std::string, std::string> customSyntax(const std::string &s);
